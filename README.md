@@ -16,6 +16,9 @@ In the future, this project can be modified to run other chore-like jobs, which 
 # How to run this code
 ```shell
     # prod
+    # go to cli.cfg
+    # in 'folders', list the folders that needs to be migrated to v2
+    # ensure no space between the folder names, otherwise it doesn't work
     python runner.py -p
     # then go to the src/tools folder
     make
