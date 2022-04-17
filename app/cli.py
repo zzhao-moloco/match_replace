@@ -37,8 +37,7 @@ def open_file_recursive(path, mode):
 # is_file_needed picks out files of interest based on the filename and it's location
 def is_file_needed(matcher, root, fname, fnames):
     cond1 = matcher.test(fname)
-    cond2 = "main.go" in fnames
-    return cond1 and cond2
+    return cond1
 
 
 def make_write_files(in_paths, out_paths):
@@ -71,7 +70,22 @@ def command_pointer(lines):
             insert = l.find("cli.")
             new_line = l[:insert]+"*"+l[insert:]
             lines[i] = new_line
+        elif l.strip() == "cli.Command{":
+            insert = l.find("cli.")
+            new_line = l[:insert]+"&"+l[insert:]
+            lines[i] = new_line
     return lines
+
+
+def remove_global_prefix(lines):
+    for i in range(len(lines)):
+        l = lines[i]
+        if ".Global" in l:
+            l = l.replace(".GlobalString", ".String")
+            l = l.replace(".GlobalBool", ".Bool")
+            lines[i] = l
+    return lines
+
 
 def seperate_alias(lines):
     flag_matcher = sm.Matcher("*cli.{flag_type}Flag{*")
@@ -96,7 +110,8 @@ def seperate_alias(lines):
                 new_lines.append(new_line)
                 # skip the next line check
                 i += 1
-                patch_line = l[:l.find("Name")] + 'Aliases: []string{"'+alias+'"},' + l[l.rfind(",")+1:]
+                patch_line = l[:l.find(
+                    "Name")] + 'Aliases: []string{"'+alias+'"},' + l[l.rfind(",")+1:]
                 # print(patch_line)
                 new_lines.append(patch_line)
             elif name_with_var_matcher.test(l):
@@ -105,7 +120,8 @@ def seperate_alias(lines):
                 # print(new_line)
                 new_lines.append(new_line)
                 i += 1
-                patch_line = l[:l.find("Name")] + 'Aliases: []string{'+alias_var+'},' + l[l.rfind(",")+1:]
+                patch_line = l[:l.find(
+                    "Name")] + 'Aliases: []string{'+alias_var+'},' + l[l.rfind(",")+1:]
                 # print(patch_line)
                 new_lines.append(patch_line)
             else:
@@ -115,10 +131,11 @@ def seperate_alias(lines):
         else:
             new_lines.append(l)
         i += 1
-            
+
     return new_lines
 
-transformers = [update_import,command_pointer, seperate_alias]
+
+transformers = [update_import, command_pointer,remove_global_prefix, seperate_alias]
 
 
 def transform(rfd, wfd, prod):
@@ -126,7 +143,8 @@ def transform(rfd, wfd, prod):
     if prod:
         for f in transformers:
             lines = f(lines)
-        rfd.seek(0, 0)
+        rfd.seek(0,0)
+        rfd.truncate(0)
         rfd.writelines(lines)
         return
     for f in transformers:
