@@ -110,6 +110,7 @@ def seperate_alias(lines):
                 new_lines.append(patch_line)
             else:
                 # these next lines to flags didn't get caught
+                print("skipped:", end="")
                 print(l)
         else:
             new_lines.append(l)
@@ -123,6 +124,10 @@ transformers = [update_import,command_pointer, seperate_alias]
 def transform(rfd, wfd, prod):
     lines = rfd.readlines()
     if prod:
+        for f in transformers:
+            lines = f(lines)
+        rfd.seek(0, 0)
+        rfd.writelines(lines)
         return
     for f in transformers:
         lines = f(lines)
@@ -132,6 +137,8 @@ def transform(rfd, wfd, prod):
 def transform_all(r_fds, w_fds):
     if not w_fds:
         # prod mode
+        for i in range(len(r_fds)):
+            transform(r_fds[i], None, True)
         return
     # test mode
     for i in range(len(r_fds)):
@@ -167,9 +174,11 @@ def main():
         transform_all(r_fds, w_fds)
         close_all(r_fds)
         close_all(w_fds)
-
     else:
-        pass
+        # production
+        fds = open_files(paths, "r+")
+        transform_all(fds, None)
+        close_all(fds)
 
 
 def close_all(fds):
